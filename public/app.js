@@ -214,6 +214,40 @@
     return [sentences.join(""), rest];
   }
 
+  // Greedy word wrap of one chunk to a max visual width, measured with the
+  // same font the quill will rasterize. English breaks on the last space within
+  // width; CJK (no spaces) breaks at the overflowing glyph. Returns line strings.
+  function wrapToLines(ctx, text, fontPx, maxWidth) {
+    ctx.save();
+    ctx.font = `${fontPx}px "Dancing Script", cursive`;
+    const lines = [];
+    let line = "";
+    let lastSpace = -1;
+    const pushIf = () => { if (line.trim()) lines.push(line.trim()); line = ""; lastSpace = -1; };
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === "\n") { pushIf(); continue; }
+      if (ch === " ") lastSpace = line.length;
+      const trial = line + ch;
+      if (ctx.measureText(trial).width > maxWidth && line) {
+        // prefer to break after the last space (English); else break right here (CJK)
+        if (lastSpace > 0 && lastSpace < line.length) {
+          lines.push(line.slice(0, lastSpace).trim());
+          line = line.slice(lastSpace + 1) + ch;
+        } else {
+          pushIf();
+          line = ch;
+        }
+        lastSpace = -1;
+      } else {
+        line = trial;
+      }
+    }
+    pushIf();
+    ctx.restore();
+    return lines;
+  }
+
   async function streamReply(image) {
     const resp = await fetch("/api/chat", {
       method: "POST",
@@ -227,15 +261,25 @@
     });
     if (!resp.ok || !resp.body) throw new Error(`chat ${resp.status}`);
 
+    // Ensure Dancing Script is loaded before we measure text for wrapping.
+    // Without this, measureText falls back to serif (narrower than script), so
+    // wrapToLines under-wraps → single visual lines overflow the screen on
+    // phones and get clipped (the "one line still incomplete" bug).
+    if (document.fonts && document.fonts.ready) {
+      try { await document.fonts.ready; } catch (_) { /* fonts API optional */ }
+    }
+
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buf = "";
     let accumulatedText = "";
     const rx = RX();
     let nextY = Math.round(CSS_H / 2);
-    const lineHeight = Math.round(CSS_H * 0.12);
+    const fontPx = Math.round(42 * rx);
+    const lineHeight = Math.round(fontPx * 1.7);
     const margin = Math.round(80 * rx);
     const maxRight = CSS_W - margin;
+    const maxLineWidth = maxRight - margin;
 
     // Serialize sentence-writing: each promise resolves only after the quill finishes.
     let writeChain = Promise.resolve();
@@ -256,15 +300,19 @@
       for (const piece of pieces) {
         const pe = piece.trim();
         if (!pe) continue;
-        writeChain = writeChain.then(async () => {
-          const y = nextY;
-          const res = await Handwriting.renderAndAnimate(pe, ctx, {
-            fontPx: Math.round(52 * rx),
-            offsetX: margin,
-            offsetY: y,
+        const visualLines = wrapToLines(ctx, pe, fontPx, maxLineWidth);
+        for (const ln of visualLines) {
+          if (!ln) continue;
+          writeChain = writeChain.then(async () => {
+            const y = nextY;
+            await Handwriting.renderAndAnimate(ln, ctx, {
+              fontPx,
+              offsetX: margin,
+              offsetY: y,
+            });
+            nextY = Math.min(CSS_H - lineHeight, y + lineHeight);
           });
-          nextY = Math.min(CSS_H - lineHeight, y + lineHeight);
-        });
+        }
       }
     };
 
@@ -285,11 +333,15 @@
           flushSentences(true);
           // write any trailing prose that never hit a sentence boundary
           if (pendingSentence.trim()) {
-            writeChain = writeChain.then(() =>
-              Handwriting.renderAndAnimate(pendingSentence.trim(), ctx, {
-                fontPx: Math.round(52 * rx), offsetX: margin, offsetY: nextY,
-              })
-            );
+            for (const ln of wrapToLines(ctx, pendingSentence.trim(), fontPx, maxLineWidth)) {
+              if (!ln) continue;
+              writeChain = writeChain.then(() => {
+                const y = nextY;
+                return Handwriting.renderAndAnimate(ln, ctx, {
+                  fontPx, offsetX: margin, offsetY: y,
+                }).then(() => { nextY = Math.min(CSS_H - lineHeight, y + lineHeight); });
+              });
+            }
           }
           await writeChain;
           return;

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.ico">
+<title>管理员 — 哈利波特的神奇日记本</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=EB+Garamond&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="admin">
+  <div id="loginSection" class="admin-section">
+    <h1 class="admin-title">管理员登录</h1>
+    <input id="adminUser" type="text" placeholder="账号" autocomplete="off" class="admin-input">
+    <input id="adminPass" type="password" placeholder="密码" autocomplete="off" class="admin-input">
+    <button id="adminLoginBtn" class="admin-btn">登录</button>
+    <p id="loginError" class="landing-error hidden"></p>
+    <a href="/" class="back-home-btn">← 返回主页</a>
+  </div>
+
+  <div id="genSection" class="admin-section hidden">
+    <p id="whoami" class="admin-whoami hidden"></p>
+    <h1 class="admin-title">钥匙管理</h1>
+    <div class="admin-row">
+      <label class="admin-field">密钥长度(字节)
+        <input id="keyBytes" type="number" class="admin-input compact" value="32" min="8" max="64">
+      </label>
+      <button id="genKeyBtn" class="admin-btn">生成新钥匙</button>
+    </div>
+    <p id="genError" class="landing-error hidden"></p>
+    <div id="keyList" class="key-list"></div>
+
+    <details class="admin-details">
+      <summary>修改管理员账号 / 密码</summary>
+      <input id="cwUser" type="text" placeholder="新账号" autocomplete="off" class="admin-input">
+      <input id="cwCurPass" type="password" placeholder="当前密码" autocomplete="off" class="admin-input">
+      <input id="cwNewPass" type="password" placeholder="新密码(≥6位)" autocomplete="off" class="admin-input">
+      <button id="changeBtn" class="admin-btn">保存并重启</button>
+      <p id="changeError" class="landing-error hidden"></p>
+      <p class="cfg-note">改完后服务会重启,当前登录会被踢出,需用新账号重登。账号密码写入 .env。</p>
+    </details>
+
+    <a href="/" class="back-home-btn">← 返回主页</a>
+  </div>
+
+  <script src="/admin.js"></script>
+</body>
+</html>

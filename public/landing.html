@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="/favicon.ico">
+<title>哈利波特的神奇日记本</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=EB+Garamond&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="landing">
+  <div class="landing-wrap">
+    <h1 class="landing-title">哈利波特的神奇日记本</h1>
+    <p class="landing-intro">小哈利波特在汤姆里德尔的笔记上写字，停笔等一会儿，刚写下去的字会慢慢消失。一行新的手写体从纸面上浮出来，像是另一头的汤姆里德尔给哈利的回信。</p>
+    <figure class="landing-figure">
+      <img src="/riddle.jpg" alt="哈利波特的神奇日记本" class="landing-img">
+    </figure>
+
+    <details class="landing-guide">
+      <summary>使用说明</summary>
+      <ol>
+        <li>需要拿到最新的<b>密钥钥匙</b>才可以体验（向管理员索取；后台 /admin 可生成）。</li>
+        <li>进入日记本后，点右上角 <b>⚙</b>，填入自定义<b>提供商 Provider</b>。</li>
+        <li>填 <b>BASE_URL</b> —— OpenAI 兼容接口地址。</li>
+        <li>填 <b>MODEL</b> —— 须是<b>视觉模型</b>（能看懂你写在纸上的字）。常用推荐：
+          <ul>
+            <li><code>meta/llama-3.2-11b-vision-instruct</code> ← 小，便宜，够用，<b>推荐先试</b></li>
+            <li><code>meta/llama-3.2-90b-vision-instruct</code> ← 大，慢，效果好</li>
+            <li><code>microsoft/phi-3-vision-128k-instruct</code> ← 小，视觉也能用</li>
+            <li><code>nvidia/llama-3.1-nemotron-nano-vl-8b-v1</code> ← 带名称里 <code>-vl-</code> 的是视觉模型</li>
+            <li><code>nvidia/nemotron-nano-12b-v2-vl</code> ← n 家中量视觉</li>
+            <li><code>nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1</code> ← 带 <code>-vlm</code></li>
+          </ul>
+        </li>
+        <li>保存配置后停笔约 3 秒，墨迹被日记"喝掉"，回信会以手写体浮现。</li>
+      </ol>
+      <p class="landing-guide-note">判别小窍门：模型名里带 <code>-vl-</code> / <code>-vlm</code> / <code>-vision</code> 的就是视觉模型；只有文字模型看不懂你写的内容。</p>
+    </details>
+
+    <div class="landing-key-row">
+      <input id="keyInput" type="password" placeholder="输入钥匙…" autocomplete="off" class="landing-key-input">
+      <button id="enterBtn" class="landing-enter-btn">哈利波特的神奇日记本</button>
+    </div>
+    <p id="keyError" class="landing-error hidden"></p>
+    <div class="landing-links">
+      <a href="/admin" class="landing-admin-link">管理员入口</a>
+      <a href="https://github.com/jeffreyrobeson/riddle" class="landing-admin-link" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+  </div>
+  <script src="/landing.js"></script>
+</body>
+</html>

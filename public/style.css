@@ -1,0 +1,542 @@
+/* Riddle — a Tom Riddle diary tribute. Aged-paper dark palette, fullscreen canvas. */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #0e0c0a;
+  overflow: hidden;            /* the page *is* the diary; no scroll */
+  font-family: "EB Garamond", Georgia, serif;
+  color: #c9bda4;
+}
+
+#page {
+  display: block;
+  width: 100vw;
+  height: 100vh;                 /* fallback */
+  height: 100dvh;                /* iOS: tracks the visible viewport, no toolbar jump */
+  touch-action: none;            /* let us capture the pen, not the browser's gestures */
+  cursor: crosshair;
+  background: #1a1611;           /* dim parchment in lamplight */
+}
+
+#status {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-style: italic;
+  letter-spacing: .04em;
+  color: #8a7d63;
+  font-size: 18px;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  pointer-events: none;
+  transition: opacity .6s ease;
+}
+
+#status.hidden { opacity: 0; }
+
+#hint {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  font-style: italic;
+  color: #6b5f4a;
+  font-size: 14px;
+  letter-spacing: .03em;
+  pointer-events: none;
+  transition: opacity .8s ease;
+}
+
+#hint.faded { opacity: 0; }
+
+/* --- config panel ---------------------------------------------------------- */
+#configBtn {
+  position: fixed;
+  top: 16px;
+  right: 18px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #3a3327;
+  border-radius: 50%;
+  background: rgba(26, 22, 16, 0.7);
+  color: #8a7d63;
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 20;
+  transition: background .2s, transform .2s;
+}
+#configBtn:hover { background: rgba(60, 50, 36, 0.9); transform: rotate(30deg); }
+#configBtn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+#configPanel {
+  position: fixed;
+  top: 64px;
+  right: 18px;
+  width: 320px;
+  max-width: calc(100vw - 36px);
+  padding: 18px 18px 14px;
+  background: #15110c;
+  border: 1px solid #3a3327;
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.55);
+  z-index: 19;
+  font-family: "EB Garamond", Georgia, serif;
+  color: #c9bda4;
+  transition: opacity .2s ease, transform .2s ease;
+}
+#configPanel.hidden { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+#configPanel h2 {
+  margin: 0 0 12px;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18px;
+  color: #8a7d63;
+  letter-spacing: .03em;
+}
+#configPanel label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #9c8f74;
+  letter-spacing: .02em;
+}
+#configPanel input,
+#configPanel select {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 9px;
+  background: #1f1a13;
+  border: 1px solid #3a3327;
+  border-radius: 4px;
+  color: #e7dcbc;
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 14px;
+  outline: none;
+}
+#configPanel input:focus,
+#configPanel select:focus { border-color: #6b5f4a; }
+#configPanel select option { background: #1f1a13; }
+.cfg-actions { display: flex; gap: 10px; margin-top: 6px; }
+#configPanel button {
+  flex: 1;
+  padding: 8px 10px;
+  background: #3a3327;
+  border: 1px solid #4a4133;
+  border-radius: 4px;
+  color: #e7dcbc;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  letter-spacing: .03em;
+}
+#configPanel button.ghost { background: transparent; color: #8a7d63; }
+#configPanel button:hover { background: #4a4133; }
+#configPanel button.ghost:hover { background: rgba(80,70,52,.4); }
+.cfg-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  font-style: italic;
+  color: #6b5f4a;
+  line-height: 1.4;
+  letter-spacing: .02em;
+}
+#cfgSaved {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26,22,16,.92);
+  border: 1px solid #3a3327;
+  color: #c9bda4;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-style: italic;
+  font-size: 14px;
+  z-index: 30;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+#cfgSaved.show { opacity: 1; }
+
+/* --- shared: generic .hidden for landing/admin (ID-scoped .hidden on the
+   diary page is higher specificity, so they keep their opacity:0 behavior) --- */
+.hidden { display: none; }
+
+/* --- landing page ---------------------------------------------------------- */
+body.landing {
+  margin: 0;
+  overflow: auto;
+  background: #1a1611;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: "EB Garamond", Georgia, serif;
+  color: #c9bda4;
+}
+.landing-wrap {
+  max-width: 640px;
+  padding: 48px 24px;
+  text-align: center;
+}
+.landing-title {
+  font-family: "Dancing Script", cursive;
+  font-size: clamp(28px, 5.5vw, 52px);
+  font-weight: 700;
+  color: #e7dcbc;
+  margin: 0 0 28px;
+  letter-spacing: .01em;
+  white-space: nowrap;            /* 强制单行:哈利波特的神奇日记本 */
+  line-height: 1.15;
+  text-shadow: 0 2px 10px rgba(0,0,0,.55);
+}
+.landing-intro {
+  font-size: 17px;
+  line-height: 1.9;
+  color: #9c8f74;
+  margin: 0 0 40px;
+  letter-spacing: .02em;
+}
+.landing-key-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+.landing-key-input {
+  width: 100%;
+  max-width: 360px;
+  padding: 13px 18px;
+  background: #1f1a13;
+  border: 1px solid #3a3327;
+  border-radius: 6px;
+  color: #e7dcbc;
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 16px;
+  text-align: center;
+  outline: none;
+  transition: border-color .2s;
+}
+.landing-key-input:focus { border-color: #6b5f4a; }
+.landing-enter-btn {
+  padding: 14px 44px;
+  background: #3a3327;
+  border: 1px solid #4a4133;
+  border-radius: 6px;
+  color: #e7dcbc;
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 18px;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: background .2s, transform .05s;
+}
+.landing-enter-btn:hover:not(:disabled) { background: #4a4133; }
+.landing-enter-btn:active:not(:disabled) { transform: translateY(1px); }
+.landing-enter-btn:disabled { opacity: .5; cursor: not-allowed; }
+.landing-figure {
+  margin: 0 0 36px;
+  padding: 0;
+}
+.landing-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid #3a3327;
+  box-shadow: 0 6px 22px rgba(0,0,0,.55);
+  display: block;
+  margin: 0 auto;                /* 居中：figure 默认左对齐，这里把 img 拉到中线 */
+}
+.landing-guide {
+  margin: 0 auto 32px;
+  max-width: 560px;
+  text-align: left;
+  background: rgba(31, 26, 19, 0.6);
+  border: 1px solid #3a3327;
+  border-radius: 6px;
+  padding: 0 16px;
+}
+.landing-guide summary {
+  cursor: pointer;
+  padding: 12px 0;
+  text-align: center;
+  font-style: italic;
+  letter-spacing: .03em;
+  color: #9c8f74;
+  list-style: none;            /* hide default triangle… */
+}
+.landing-guide summary::-webkit-details-marker { display: none; }
+.landing-guide summary::before { content: "▸  "; color: #6b5f4a; }
+.landing-guide[open] summary::before { content: "▾  "; }
+.landing-guide summary:hover { color: #e7dcbc; }
+.landing-guide ol {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #c9bda4;
+}
+.landing-guide ol > li { margin: 6px 0; }
+.landing-guide ul {
+  margin: 8px 0 4px;
+  padding-left: 18px;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #9c8f74;
+}
+.landing-guide ul > li { margin: 3px 0; }
+.landing-guide code {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 12.5px;
+  color: #e7dcbc;
+  background: rgba(0,0,0,.28);
+  padding: 1px 5px;
+  border-radius: 3px;
+  word-break: break-all;
+}
+.landing-guide b { color: #e7dcbc; font-weight: 700; }
+.landing-guide-note {
+  margin: 10px 0 14px;
+  padding: 9px 12px;
+  border-left: 2px solid #6b5f4a;
+  font-size: 12.5px;
+  font-style: italic;
+  color: #9c8f74;
+  line-height: 1.6;
+}
+.landing-error {
+  margin: 18px 0 0;
+  font-style: italic;
+  color: #c97a5a;
+  font-size: 14px;
+  letter-spacing: .02em;
+}
+.landing-error.hidden { display: none; }
+.landing-admin-link {
+  display: inline-block;
+  margin-top: 56px;
+  font-size: 13px;
+  font-style: italic;
+  color: #6b5f4a;
+  text-decoration: none;
+  border-bottom: 1px dotted #3a3327;
+  padding-bottom: 1px;
+}
+.landing-admin-link:hover { color: #8a7d63; }
+.landing-links {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+}
+.landing-links .landing-admin-link { margin-top: 56px; }
+
+/* --- admin page ------------------------------------------------------------ */
+body.admin {
+  margin: 0;
+  overflow: auto;
+  background: #1a1611;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: "EB Garamond", Georgia, serif;
+  color: #c9bda4;
+}
+.admin-section {
+  max-width: 520px;
+  width: 100%;
+  padding: 48px 24px;
+  text-align: center;
+}
+.admin-title {
+  font-family: "Dancing Script", cursive;
+  font-size: 38px;
+  font-weight: 400;
+  color: #c9bda4;
+  margin: 0 0 30px;
+  letter-spacing: .02em;
+}
+.admin-input {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin: 10px auto;
+  padding: 10px 14px;
+  background: #1f1a13;
+  border: 1px solid #3a3327;
+  border-radius: 4px;
+  color: #e7dcbc;
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 15px;
+  outline: none;
+  transition: border-color .2s;
+}
+.admin-input:focus { border-color: #6b5f4a; }
+.admin-btn {
+  margin-top: 18px;
+  padding: 12px 36px;
+  background: #3a3327;
+  border: 1px solid #4a4133;
+  border-radius: 6px;
+  color: #e7dcbc;
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 16px;
+  letter-spacing: .03em;
+  cursor: pointer;
+}
+.admin-btn:hover:not(:disabled) { background: #4a4133; }
+.admin-btn:disabled { opacity: .5; cursor: not-allowed; }
+.key-list {
+  margin-top: 28px;
+  text-align: left;
+}
+.key-empty {
+  font-style: italic;
+  color: #6b5f4a;
+  text-align: center;
+  font-size: 14px;
+  padding: 16px 0;
+}
+.key-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 14px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid #2a2520;
+}
+.key-value {
+  grid-column: 1 / 2;
+  color: #e7dcbc;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  word-break: break-all;
+}
+.key-meta {
+  grid-column: 1 / 2;
+  color: #6b5f4a;
+  font-size: 12px;
+}
+.key-copy {
+  grid-column: 2 / 3;
+  grid-row: 1 / 3;
+  align-self: center;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid #4a4133;
+  border-radius: 4px;
+  color: #9c8f74;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.key-copy:hover { background: rgba(80,70,52,.4); color: #e7dcbc; }
+
+/* --- back-to-home buttons -------------------------------------------------- */
+/* Diary page: house glyph next to the ⚙ config button, top-right. */
+.home-btn {
+  position: fixed;
+  top: 16px;
+  right: 62px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #3a3327;
+  border-radius: 50%;
+  background: rgba(26, 22, 16, 0.7);
+  color: #8a7d63;
+  font-size: 18px;
+  line-height: 38px;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  z-index: 20;
+  transition: background .2s, transform .2s;
+}
+.home-btn:hover { background: rgba(60, 50, 36, 0.9); color: #e7dcbc; }
+
+/* Admin page: a clear pill button under the form / key list. */
+.back-home-btn {
+  display: inline-block;
+  margin-top: 36px;
+  padding: 11px 28px;
+  background: transparent;
+  border: 1px solid #4a4133;
+  border-radius: 6px;
+  color: #9c8f74;
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 15px;
+  letter-spacing: .03em;
+  text-decoration: none;
+  transition: background .2s, color .2s;
+}
+.back-home-btn:hover { background: rgba(80,70,52,.4); color: #e7dcbc; }
+
+/* admin key-management controls added later */
+.admin-whoami {
+  margin: 0 0 4px;
+  padding: 0;
+  font-size: 13px;
+  font-style: italic;
+  color: #9c8f74;
+  letter-spacing: .02em;
+}
+.admin-whoami.hidden { display: none; }
+.admin-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.admin-field {
+  font-size: 13px;
+  color: #9c8f74;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+.admin-input.compact {
+  display: block;
+  margin: 0;
+  width: 96px;
+  text-align: center;
+}
+.admin-details {
+  margin-top: 34px;
+  border-top: 1px solid #2a2520;
+  padding-top: 18px;
+  text-align: left;
+}
+.admin-details summary {
+  cursor: pointer;
+  color: #9c8f74;
+  font-style: italic;
+  letter-spacing: .02em;
+  margin-bottom: 12px;
+}
+.admin-details summary:hover { color: #e7dcbc; }
+.admin-details .admin-input { margin-left: auto; margin-right: auto; }
+.admin-details .cfg-note {
+  margin: 12px auto 0;
+  max-width: 360px;
+  text-align: center;
+}
+.key-actions { grid-column: 2 / 3; grid-row: 1 / 3; display: flex; gap: 8px; align-self: center; }
+.key-del {
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #5a3826;
+  border-radius: 4px;
+  color: #c97a5a;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.key-del:hover { background: rgba(140,60,40,.25); color: #e7dcbc; }

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<link rel="icon" type="image/svg+xml" href="/favicon.ico">
+<title>哈利波特的神奇日记本</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=EB+Garamond&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="status" class="hidden">the diary is thinking…</div>
+  <div id="cfgSaved" class="config-saved" role="status" aria-live="polite"></div>
+  <canvas id="page"></canvas>
+
+  <a href="/" id="homeBtn" title="返回主页" class="home-btn">&#8962;</a>
+  <button id="configBtn" title="Configure the oracle">&#9881;</button>
+  <div id="configPanel" class="hidden">
+    <h2>the oracle</h2>
+    <label>Provider
+      <select id="cfgProvider"></select>
+    </label>
+    <label>Base URL
+      <input id="cfgBaseUrl" type="text" placeholder="https://api.openai.com/v1" autocomplete="off">
+    </label>
+    <label>Model
+      <input id="cfgModel" type="text" placeholder="视觉模型，如 meta/llama-3.2-11b-vision-instruct" list="visionModels" autocomplete="off">
+      <datalist id="visionModels"></datalist>
+    </label>
+    <label>API key
+      <input id="cfgKey" type="password" placeholder="sk-… (leave empty for offline mock)" autocomplete="off">
+    </label>
+    <div class="cfg-actions">
+      <button id="cfgSave">save</button>
+      <button id="cfgClear" class="ghost">clear</button>
+    </div>
+    <p id="cfgNote" class="cfg-note">saved in this browser only. leave the key empty to keep the built-in mock.</p>
+  </div>
+  <p id="hint">Write to me. Pause, and the diary will answer.</p>
+
+  <!-- handwriting engine: rasterize → Zhang-Suen → chain-code trace → replay -->
+  <script src="/handwriting.js"></script>
+  <!-- main control: input, idle, drink-ink, SSE, sentence-by-sentence inking -->
+  <script src="/app.js"></script>
+</body>
+</html>
